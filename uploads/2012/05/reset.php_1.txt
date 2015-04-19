@@ -1,0 +1,142 @@
+<?php
+//.gnupg and all subdirectories need to be owned by www-data:www-data and need 640 permissions at the least.
+require_once "Mail.php";
+
+function sentCryptedMail($password, $to, $givenName, $cn){
+	$subject = "Your LDAP password is reset";
+	$from = "provider@example.com";
+	$body = "Dear ".$givenName.",\n\nYour password is reset to ".$password."\n\nKind regards,\nYour sysadmin";
+		
+	$host = "smtp.example.com";
+	$port = "25";
+	
+	putenv("GNUPGHOME=/var/www/.gnupg");
+
+	$gpg = new gnupg();
+	$value = $gpg->addencryptkey($to);
+	
+	$enc = $gpg->encrypt($body);
+ 
+	$headers = array ('From' => $from, 'To' => $to, 'Subject' => $subject);
+	$smtp = Mail::factory('smtp', array('host' => $host, 'port' => $port, 'auth' => false));
+
+	$mail = $smtp->send($to, $headers, $enc);
+	
+	if (PEAR::isError($mail)){
+		echo("<p>".$mail->getMessage(). "</p>");
+	}else{
+		echo("<p>A PGP encrypted email is sent to ".$to.", containing your new LDAP credentials.</p>");
+	}
+}
+	
+function randomPassword($length = 56){
+
+	// start with a blank password
+	$password = "";
+
+	// define possible characters - any character in this string can be
+	// picked for use in the password, so if you want to put vowels back in
+	// or add special characters such as exclamation marks, this is where
+	// you should do it
+	$possible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	// we refer to the length of $possible a few times, so let's grab it now
+   	$maxlength = strlen($possible);
+  
+	// check for length overflow and truncate if necessary
+	if ($length > $maxlength) {
+		$length = $maxlength;
+	}
+	
+	// set up a counter for how many characters are in the password so far
+	$i = 0; 
+    
+	// add random characters to $password until $length is reached
+	while ($i < $length) { 
+		// pick a random character from the possible ones
+		$char = substr($possible, mt_rand(0, $maxlength-1), 1);
+	        
+		// have we already used this character in $password?
+		if (!strstr($password, $char)) { 
+	        	// no, so it's OK to add it onto the end of whatever we've already got...
+		        $password .= $char;
+		        // ... and increase the counter by one
+		        $i++;
+		}
+	}
+	    // done!
+	    return $password;
+//source: http://www.laughing-buddha.net/php/password
+}
+
+function changeLDAPPassword(){
+	if (isset($_POST['username'])){
+		$username = trim($_POST['username']);
+
+		$ldap_server = "provider.example.com";
+		$dn = "ou=employees,dc=example,dc=com";
+		$admin = "cn=admin,dc=example,dc=com";
+		$user_dn = "uid=".$username.",".$dn;
+
+		$ldap = ldap_connect($ldap_server, 389);
+		ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
+		ldap_set_option($ldap, LDAP_OPT_REFERRALS, 0);
+
+		if($ldap){
+			$bind = @ldap_bind($ldap, $admin, '<LDAP password>');
+			if(!$bind){
+				echo "Couldn't bind, ask your sysadmin to check his scripts and to reset your password.";
+			}else{
+				$filter = "uid=".$username;
+				$ldap_result = ldap_list($ldap, $dn, $filter);
+				$info = ldap_get_entries($ldap, $ldap_result);
+				$givenName = $info[0]["givenname"][0];
+				$mail = $info[0]["mail"][0];
+				$cn = $info[0]["cn"][0];
+				$new_password = randomPassword();
+				mt_srand((double)microtime()*1000000);
+				$salt = pack("CCCCCCCC", mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand());
+				$userpassword = "{SSHA}".base64_encode(sha1($new_password.$salt, true).$salt);
+
+				$userdata = array("userpassword" => array(0 => $userpassword));
+				$result = ldap_mod_replace($ldap, $user_dn , $userdata);
+					
+				$krb_password = '"'.$new_password.'"';
+				if ($result){
+					$password = "<pwdchange krb password>"; 
+					$cmd = "kadmin -p pwdchange/provider.example.com -w \"".$password."\" -q 'cpw -pw ".$krb_password." ".$username."' > /dev/null";
+					system ($cmd);
+					echo "Your password is changed!";
+					sentCryptedMail($new_password, $mail, $givenName, $cn);
+				}else{	 
+					echo "There was a problem changing your password, please warn your sysadmin."; 
+				}
+			}
+		}
+		@ldap_close($ldap);
+	}
+}
+?>
+<html>
+	<head>
+		<title>Change LDAP password</title>
+		<link href="stylesheet.css" rel="stylesheet" type="text/css">
+	</head>
+	<body>
+	<div="header">
+		<img src="example_logo.png" alt="example logo"/></br>
+		<strong>Reset your LDAP/Kerberos password</strong></br></br>
+	</div>
+	<?
+		changeLDAPPassword();
+	?>
+	<div="content">
+		<form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="POST">
+		<table>
+		<tr><td><p>Username:</p></td><td> <input type="text" name="username" /></td></tr>
+		<tr><td></td><td><input type="submit" value="Submit" /></td></tr>
+		</table>
+		</form>
+		<p><a href="index.php">Change</a> your password</p>
+	</div>
+	</body>
+</html>

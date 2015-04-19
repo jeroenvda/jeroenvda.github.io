@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>How to encrypt OSSEC email alerts - jeroenvda.eu</title>
+  <meta name="author" content="Jeroen Vanderauwera">
+
+   
+  <meta name="description" content="Security and *nix">
+  
+  <meta name="keywords" content="">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="https://jeroenvda.eu/2012/06/01/how-to-encrypt-ossec-email-alerts">
+  <link href="/favicon.png" rel="icon">
+  <link href='http://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jeroenvda.eu" type="application/atom+xml">
+  <script src="/js/jquery.js"></script>
+  <script src="/js/bootstrap-collapse.js"></script>
+  <script src="/js/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/js/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <div class="navbar navbar-inverse navbar-static-top">
+  	<div class="navbar-inner">
+  	  <div class="container">
+        <a class="btn btn-navbar" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+          <span class="fui-menu-24"></span>
+        </a>
+  	  	<div class="nav-collapse collapse navbar-responsive-collapse" style="height:0;">
+  	      <ul class="nav">
+    
+        <li ><a href="/index.html">Home</a></li>
+    
+        <li ><a href="/profile.html">Profile</a></li>
+    
+        <li ><a href="/blog/archives/index.html">Archive</a></li>
+    
+</ul>
+
+<ul class="nav pull-right">
+    
+    
+    <li><a href="http://linkedin.com/in/jeroenvanderauwera" title="Linkedin Profile"><i class="icon-linkedin-sign social-navbar"></i></a></li>
+    
+    
+    <li><a href="http://twitter.com/jeroenvda" title="Twitter Profile"><i class="icon-twitter-sign social-navbar"></i></a></li>
+    
+    
+    <li><a href="http://plus.google.com/103214299291450234981" title="Google+ Profile"><i class="icon-google-plus-sign social-navbar"></i></a></li>
+    
+    
+    
+</ul>
+
+  	    </div>
+  	  </div>
+  	</div>
+  </div>
+  <div class="container" id="main">
+      <div class="row-fluid">
+        <div id="content">
+          <div>
+<article class="hentry" role="article">
+  
+
+  <header>
+  <div class="jumbotron">
+    How to Encrypt OSSEC Email Alerts
+	<h5>
+
+
+
+
+
+
+
+
+  
+
+
+<i class="icon-calendar-empty"></i> <time datetime="2012-06-01T00:00:00+02:00" pubdate data-updated="true">Jun 1<span>st</span>, 2012</time></h5>
+  </div>
+</header>
+  <div class="row-fluid">
+    <div class="span12">
+      <p><img class="alignleft size-full wp-image-286" alt="ossec-hids" src="https://jeroenvda.eu/wp-content/uploads/2012/06/ossec-hids1.png" width="191" height="67" /></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p>You can use procmail to encrypt the email alerts that are send by OSSEC. This article explains one of the many ways how you can obtain this.</p>
+
+<p>I did this by using the following:</p>
+
+<ul>
+<li>Ubuntu 12.04 LTS</li>
+<li>procmail</li>
+<li>postfix</li>
+<li>OSSEC</li>
+<li>gnupg</li>
+<li>Another SMTP server</li>
+</ul>
+
+
+<!--more-->
+
+
+<p>First, edit your OSSEC configuration at /var/ossec/etc/ossec.conf to tell it to send mails to the root account on the localhost.</p>
+
+<pre>&lt;global&gt;
+    &lt;email_notification&gt;yes&lt;/email_notification&gt;
+    &lt;email_to&gt;root@localhost&lt;/email_to&gt;
+    &lt;smtp_server&gt;127.0.0.1&lt;/smtp_server&gt;
+    &lt;email_from&gt;ossec@localhost&lt;/email_from&gt;
+  &lt;/global&gt;</pre>
+
+
+<p>Then, let the alarms forward to the OSSEC account by changing the aliases:</p>
+
+<pre>echo "root: ossec" &gt;&gt; /etc/aliases
+postalias /etc/aliases</pre>
+
+
+<p>Tell postfix to use procmail as LDA (Local Delivery Agent):</p>
+
+<pre>vim /etc/postfix/main.cf</pre>
+
+
+<p>Insert this on the first line:</p>
+
+<pre>mailbox_command = /usr/bin/procmail</pre>
+
+
+<p>Your postfix configuration need to look similar to this:</p>
+
+<pre># See /usr/share/postfix/main.cf.dist for a commented, more complete version
+mailbox_command = /usr/bin/procmail
+
+smtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)
+
+myhostname =
+myorigin = $myhostname
+mydestination = hostname localhost
+relayhost = smtp.example.com
+relay_domains =
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+inet_interfaces = all</pre>
+
+
+<p>Reload postfix:</p>
+
+<pre>postfix reload</pre>
+
+
+<p>Import the public PGP key and assign the right permissions to the .gnupg directory:</p>
+
+<pre>gpg --homedir /var/ossec/.gnupg --import pubkey.asc
+chmod -R 700 /var/ossec/.gnupg
+chown -R ossec:root /var/ossec/.gnupg</pre>
+
+
+<p>Create a procmail recipe:</p>
+
+<pre>vim /var/ossec/.procmailrc</pre>
+
+
+
+
+<pre>VERBOSE=yes
+MAILDIR=/var/mail/
+DEFAULT=$MAILDIR
+LOGFILE=/var/log/procmail.log
+
+SUBJECT=`formail -xSubject:`
+:0 c
+*^To:.*root.*
+|/var/ossec/sent_encrypted_alarm.sh</pre>
+
+
+<p>Create a script that encrypts the mails:</p>
+
+<pre>vim /var/ossec/sent_encrypted_alarm.sh</pre>
+
+
+
+
+<pre>#!/bin/bash
+
+/usr/bin/formail -I "" | /usr/bin/gpg --homedir /var/ossec/.gnupg --trust-model always -ear "john@example.com" | /usr/bin/mail -s "$SUBJECT" john@example.com</pre>
+
+
+<p>Give it execute permissions and the right owner:</p>
+
+<pre>chmod +x /var/ossec/sent_encrypted_alarm.sh
+chown ossec:root /var/ossec/sent_encrypted_alarm.sh</pre>
+
+
+<p>Create the procmail log file, and give it the good permissions and owner:</p>
+
+<pre>touch /var/log/procmail.log
+chmod 660 /var/log/procmail.log
+chown ossec:root /var/log/procmail.log</pre>
+
+
+<p>This should work. If it doesn&#8217;t, check /var/log/mail.log and /var/log/procmail.log.<br/>
+<strong>References</strong></p>
+
+<ul>
+<li><a href="http://ddpbsd.blogspot.com/2011/05/encrypting-ossec-alert-emails.html">http://ddpbsd.blogspot.com/2011/05/encrypting-ossec-alert-emails.html</a></li>
+<li><a href="http://www.symantec.com/connect/articles/filtering-e-mail-postfix-and-procmail-part-three">http://www.symantec.com/connect/articles/filtering-e-mail-postfix-and-procmail-part-three</a></li>
+<li><a href="http://www.ii.com/internet/robots/procmail/qs/">http://www.ii.com/internet/robots/procmail/qs/</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+
+
+  <footer>
+    <hr>
+    
+    <div class="row-fluid">
+      
+      <div class="span6">
+        <p class="meta">
+        
+        
+
+
+
+  <a href="/blog/categories/linux/"><span class="badge">Linux</span></a>
+
+  <a href="/blog/categories/security/"><span class="badge">Security</span></a>
+
+
+
+
+        </p>
+      </div>
+      
+      <div class="span6 social-sharing">
+        <div class="sharing">
+  <div class="addthis_toolbox addthis_default_style ">
+  
+  <a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+  
+  
+  <a class="addthis_button_tweet"></a>
+  
+  
+  <a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+  
+  <a class="addthis_counter addthis_pill_style"></a>
+  </div>
+  <script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+</div>
+
+      </div>
+      
+      
+    </div>
+    
+    <div class="row-fluid">
+      <div class="span12">
+        <p class="meta">
+          
+            <a class="basic-alignment left" href="/2012/05/23/step-7-varia/" title="Previous Post: Step 7 Varia">&laquo; Step 7 Varia</a>
+          
+          
+            <a class="basic-alignment right" href="/2012/09/07/found-a-suspicious-file-lets-put-it-to-the-test/" title="Next Post: Found a suspicious file? Lets put it to the test.">Found a suspicious file? Lets put it to the test. &raquo;</a>
+          
+        </p>
+      </div>
+    </div>
+  </footer>
+</article>
+
+</div>
+
+
+
+        </div>
+      </div>
+      <div class="row-fluid">
+        <footer class="footer-page" role="contentinfo">
+          <p>
+  Copyright &copy; 2014 - Jeroen Vanderauwera -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span> - Theme by <a href="http://alexgaribay.com">Alex Garibay</a>
+</p>
+
+
+        </footer>
+      </div>
+  </div>
+  
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

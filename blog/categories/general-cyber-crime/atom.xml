@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: General cyber crime | jeroenvda.eu]]></title>
+  <link href="http://jeroenvda.github.io/blog/categories/general-cyber-crime/atom.xml" rel="self"/>
+  <link href="http://jeroenvda.github.io/"/>
+  <updated>2014-11-04T02:00:16+01:00</updated>
+  <id>http://jeroenvda.github.io/</id>
+  <author>
+    <name><![CDATA[Jeroen Vanderauwera]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Why criminals want access to your machine]]></title>
+    <link href="http://jeroenvda.github.io/2012/02/22/why-criminals-want-access-to-your-machine/"/>
+    <updated>2012-02-22T00:00:00+01:00</updated>
+    <id>http://jeroenvda.github.io/2012/02/22/why-criminals-want-access-to-your-machine</id>
+    <content type="html"><![CDATA[<p>Numerous times I&#8217;ve heard ignorant people stating that nobody will attempt to break in to their laptop or PC, because they don&#8217;t have anything of value for a random hacker. Well, you can&#8217;t be more wrong.</p>
+
+<p>Cyber criminals can benefit from your system in many ways. Remember that most of these guys can do stuff with your system where you didn&#8217;t even dream about.</p>
+
+<!--more-->
+
+
+<p>Let me give you a few real-life examples:</p>
+
+<ul>
+<li>Install keyloggers to get passwords from all kinds of accounts.</li>
+<li>Turn on the webcam and microphone to record you and manipulate the images to extort you afterwards (seems to become a trend).</li>
+<li>Install ransomware, which encrypts your hard drive. The only way to get your data back is to pay the cyber criminal for the decryption key.</li>
+<li>Use your system as a depot for all kinds of illegal files, including files that contain child abuse.</li>
+<li>Let your system participate in an attack on different servers in a larger botnet, like a Distributed Denial of Service attack.</li>
+<li>Format your hard drive</li>
+<li>Steal personal data</li>
+<li>&#8230;</li>
+</ul>
+
+
+<p>These things happen every day. The very minimum that you can do is to install AV software and a firewall and keep your virus definitions up to date. Other recommendations are to backup regularly, install an IDS, turn on extensive logging and patch where you can <img src='https://jeroenvda.eu/wp-includes/images/smilies/icon_wink.gif' alt=';)' class='wp-smiley' /> .</p>
+]]></content>
+  </entry>
+  
+</feed>

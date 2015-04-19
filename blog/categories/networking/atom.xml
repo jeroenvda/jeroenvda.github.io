@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Networking | jeroenvda.eu]]></title>
+  <link href="http://jeroenvda.github.io/blog/categories/networking/atom.xml" rel="self"/>
+  <link href="http://jeroenvda.github.io/"/>
+  <updated>2014-11-04T02:00:16+01:00</updated>
+  <id>http://jeroenvda.github.io/</id>
+  <author>
+    <name><![CDATA[Jeroen Vanderauwera]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Step 6 Configure your clients]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/23/step-6-configure-your-clients/"/>
+    <updated>2012-05-23T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/23/step-6-configure-your-clients</id>
+    <content type="html"><![CDATA[<p><a href="https://jeroenvda.eu/confessionalpowerfu.php"><span style="display: none;">inadmissible</span></a><a href="https://jeroenvda.eu/2012/05/09/full-blown-authentication-system/">Full blown authentication system</a></p>
+
+<ol>
+<li><a href="https://jeroenvda.eu/2012/05/09/installation-and-basic-configuration-of-openldap-and-mitv5-kerberos" title="Installation and basic configuration of OpenLDAP and MITv5 Kerberos">Installation and basic configuration of OpenLDAP and MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/">Linking OpenLDAP with MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-3-linking-freeradius/">Linking FreeRADIUS</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-4-replication/">Replication</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-5-hardening-your-setup/">Hardening your setup</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-6-configure-your-clients/"><strong>Configure your clients</strong></a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-7-varia/">Varia</a></li>
+</ol>
+
+
+<p>Here I&#8217;ll describe the configuration of two types of clients:</p>
+
+<ul>
+<li>a regular Ubuntu server</li>
+<li>a cisco device (running IOS)</li>
+</ul>
+
+
+<p>**<!--more-->Ubuntu server</p>
+
+<p><strong><br/>
+</strong>LDAP client configuration<br/>
+**</p>
+
+<pre>sudo apt-get install libnss-ldap
+sudo dpkg-reconfigure ldap-auth-config
+sudo auth-client-config -t nss -p lac_ldap
+sudo pam-auth-update</pre>
+
+
+<p>Modify timeouts to 5 seconds in /etc/ldap.conf and add:</p>
+
+<pre>binddn uid=system,ou=ITaccounts,dc=example,dc=com
+bindpw 
+ssl start_tls</pre>
+
+
+<p>Modify the client TLS configuration in /etc/ldap/ldap.conf:</p>
+
+<pre>BASE dc=example,dc=com
+URI ldap://provider.example.com ldap://consumer.example.com
+TLS_REQCERT demand
+TLS_CACERT /etc/ssl/certs/ca-certificates.crt</pre>
+
+
+<p>You will not be able to log in yet, you&#8217;ll get probably these kind of errors in your /var/log/auth.log:</p>
+
+<pre>nss-ldap: do_open: do_start_tls failed:stat=-1</pre>
+
+
+<p>To be able to log in, using STARTTLS, you need the certificate (the certificate is &#8216;demanded&#8217;) of the LDAP servers. If you followed this how-to, the certificates are probably located at /etc/ssl/certs/cacert.pem.<br/>
+Copy them to the client and attach the certificate to /etc/ssl/certs/ca-certificates.crt:</p>
+
+<pre>cacert.pem &gt;&gt; /etc/ssl/certs/ca-certificates.crt</pre>
+
+
+<p><strong>Kerberos client configuration<br/>
+</strong><br/>
+Install the necessary packages:</p>
+
+<pre>sudo apt-get install krb5-user libpam-krb5 libpam-ccreds auth-client-config</pre>
+
+
+<p>Ask for a ticket:</p>
+
+<pre>kinit john@EXAMPLE.COM</pre>
+
+
+<p>Verify if the ticket has been issued:</p>
+
+<pre>klist</pre>
+
+
+<p>If a homedir for every user needs to be created automatically, you may want to add /etc/pam.d/common-session:</p>
+
+<pre>session required pam_mkhomedir.so skel=/etc/skel/ umask=0027</pre>
+
+
+<p>You should be able to login now.</p>
+
+<p><strong>Cisco IOS configuration<br/>
+</strong></p>
+
+<pre>configure terminal
+aaa new-model
+aaa authentication login default group radius local
+aaa authentication login localauth local
+aaa authentication ppp default if-needed group radius local
+aaa authorization exec default group radius local
+aaa authorization network default group radius local
+aaa accounting delay-start
+aaa accounting exec default start-stop group radius
+aaa accounting network default start-stop group radius
+
+radius-server host  auth-port 1812 acct-port 1813 key testing123
+ip radius source-interface Loopback0
+aaa group server radius AuthSystems
+
+server  auth-port 1812 acct-port 1813
+enable secret exit
+aaa authentication login default group AuthSystems local</pre>
+
+
+<p>This was step 6. To proceed, go to <a href="http://jeroenvda.eu/?p=110">step 7</a>.<br/>
+<a href="https://jeroenvda.eu/confessionalpowerfu.php"><span style="display: none;">inadmissible</span></a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Cannot setuid after Ubuntu 12.04LTS upgrade when using LDAP accounts]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/03/cannot-setuid-after-ubuntu-12-04lts-upgrade-when-using-ldap-accounts/"/>
+    <updated>2012-05-03T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/03/cannot-setuid-after-ubuntu-12-04lts-upgrade-when-using-ldap-accounts</id>
+    <content type="html"><![CDATA[<p>When I upgraded a Ubuntu 11.10 server to Ubuntu 12.04LTS I suddenly got the following error message when invoking &#8216;sudo su&#8217; with an LDAP account:</p>
+
+<pre>sudo: setresuid(ROOT_UID, ROOT_UID, ROOT_UID): Operation not permitted</pre>
+
+
+<p>The LDAP client uses STARTTLS to upgrade the existing LDAP session to an encrypted connection.</p>
+
+<p>I got this error because libgcrypt11, which is used by gnutls (the more &#8216;open&#8217; counterpart of openSSL) to handle the low crypto stuff in your TLS connection, is completely broken. Instead, it has been advised to use nettle for this stuff. This is how you fix it in ubuntu 12.04LTS:</p>
+
+<!--more-->
+
+
+<p>First install the necessary packages:</p>
+
+<pre>apt-get install libgmp-dev dev-scripts
+apt-get build-dep libgnutls26</pre>
+
+
+<p>Download an install nettle. It appears that not every version works with gnutls. I know that nettle 2.1 works so I installed that version:</p>
+
+<pre>wget http://www.lysator.liu.se/~nisse/archive/nettle-2.1.tar.gz
+tar zxvf nettle-2.1.tar.gz
+cd nettle-2.1
+./configure --with-gmp
+make
+make install</pre>
+
+
+<p>Get the source of gnutls:</p>
+
+<pre>apt-get source gnutls26</pre>
+
+
+<p>Omit &#8216;&#8211;with-libgcrypt&#8217; in <em>gnutls26-2.12.14/debian/rules</em> and go to the <em>gnutls26-2.12.14</em> directory. Build a new .deb package and install it:</p>
+
+<pre>debuild -i -uc -us -b
+dpkg -i libgnutls26_2.12.14*.deb</pre>
+
+
+<p>It should work now <img src='https://jeroenvda.eu/wp-includes/images/smilies/icon_wink.gif' alt=';)' class='wp-smiley' /> .</p>
+
+<p><strong>sources</strong><br/>
+<a href="http://www.openldap.org/lists/openldap-technical/201202/msg00079.html"> http://www.openldap.org/lists/openldap-technical/201202/msg00079.html<br/>
+</a><a href="https://bugs.launchpad.net/ubuntu/+source/gnutls26/+bug/926350"> https://bugs.launchpad.net/ubuntu/+source/gnutls26/+bug/926350</a></p>
+]]></content>
+  </entry>
+  
+</feed>

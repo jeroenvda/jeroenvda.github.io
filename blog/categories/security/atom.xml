@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Security | jeroenvda.eu]]></title>
+  <link href="http://jeroenvda.github.io/blog/categories/security/atom.xml" rel="self"/>
+  <link href="http://jeroenvda.github.io/"/>
+  <updated>2014-11-04T02:00:16+01:00</updated>
+  <id>http://jeroenvda.github.io/</id>
+  <author>
+    <name><![CDATA[Jeroen Vanderauwera]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Step 7 Varia]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/23/step-7-varia/"/>
+    <updated>2012-05-23T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/23/step-7-varia</id>
+    <content type="html"><![CDATA[<p>[Full blown authentication system][1]</p>
+
+<ol>
+<li>[Installation and basic configuration of OpenLDAP and MITv5 Kerberos][2]</li>
+<li>[Linking OpenLDAP with MITv5 Kerberos][3]</li>
+<li>[Linking FreeRADIUS][4]</li>
+<li>[Replication][5]</li>
+<li>[Hardening your setup][6]</li>
+<li>[Configure your clients][7]</li>
+<li>[<strong>Varia</strong>][8]</li>
+</ol>
+
+
+<p>In this Varia section I will describe the following:</p>
+
+<ul>
+<li>Enable LDAP logging</li>
+<li>User management</li>
+<li>Reset/change password PHP script</li>
+</ul>
+
+
+<p><strong><!--more-->LDAP logging</strong></p>
+
+<p>Extra logging could be useful when debugging:</p>
+
+<pre>vim logging.ldif</pre>
+
+
+
+
+<pre>dn: cn=config
+changetype: modify
+add: olcLogLevel
+olcLogLevel: stats
+ldapmodify -x -D cn=admin,cn=config -f logging.ldif -W</pre>
+
+
+<p><strong>User management</strong></p>
+
+<p><strong>Add a user<br/>
+</strong><br/>
+Create a file with the new user data:</p>
+
+<pre>dn: uid=testuser,ou=employees,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: testuser
+cn: testuser
+sn: testuser
+givenName: testuser
+displayName: testuser
+title: Analyst
+mail: testuser@example.com
+telephoneNumber: 101
+mobile: 0032 100 101 102
+ou: example
+uidNumber: 10001
+gidNumber: 5000
+gecos: testuser
+loginShell: /bin/bash
+homeDirectory: /home/testuser</pre>
+
+
+<p>Add it to LDAP:</p>
+
+<pre>ldapadd -x -D cn=admin,dc=example,dc=com -W -f /home/jeroen/extrauser.ldif 
+Enter LDAP Password: 
+adding new entry "uid=testuser,ou=employees,dc=example,dc=com"</pre>
+
+
+<p>Add a principal to kerberos:</p>
+
+<pre>kadmin.local
+Authenticating as principal root/admin@EXAMPLE.COM with password.
+kadmin.local: addprinc -x dn="uid=testuser,ou=employees,dc=example,dc=com" testuser
+WARNING: no policy specified for testuser@EXAMPLE.COM; defaulting to no policy
+Enter password for principal "testuser@EXAMPLE.COM": 
+Re-enter password for principal "testuser@EXAMPLE.COM": 
+Principal "testuser@EXAMPLE.COM" created.</pre>
+
+
+<p>It&#8217;s VERY important to modify the kerberos ACL accordingly (/etc/krb5kdc/kadm5.acl). If you get the error: &#8220;kadmin: Client not found in Kerberos database while initializing kadmin interface&#8221;, while you just add the principal to kerberos, then it&#8217;s very likely it&#8217;s because of this. After modifying the ACL, it&#8217;s necessary to restart the krb5-kdc service (/etc/init.d/krb5-kdc restart).</p>
+
+<p><strong>Add a service<br/>
+</strong></p>
+
+<pre>dn: uid=serviceA,ou=ITaccounts,dc=example,dc=com
+objectClass: inetOrgPerson
+uid: serviceA
+cn: serviceA
+sn: serviceA
+displayName: serviceA
+mail: serviceA@example.com
+ou: Example</pre>
+
+
+<p>Add it to LDAP:</p>
+
+<pre>ldapadd -x -D cn=admin,dc=example,dc=com -W -f /home/jeroen/extraservice.ldif 
+Enter LDAP Password: 
+adding new entry "uid=serviceA,ou=ITaccounts,dc=example,dc=com"
+Change password as described here.</pre>
+
+
+<p><strong>Delete LDAP user<br/>
+</strong></p>
+
+<pre>ldapmodify -x -D cn=admin,dc=example,dc=com -W
+Enter LDAP Password: 
+dn: uid=john,ou=employees,dc=example,dc=com
+changetype:delete
+
+deleting entry "uid=frank,ou=employees,dc=example,dc=com"</pre>
+
+
+<p><strong>Change an LDAP password<br/>
+</strong></p>
+
+<pre>ldappasswd -x -D "cn=admin,dc=example,dc=bcom" -W -S "uid=testuser,ou=employees,dc=example,dc=com"</pre>
+
+
+<p><strong>Change an Kerberos password<br/>
+</strong></p>
+
+<pre>kadmin -p john@EXAMPLE.COM
+Authenticating as principal john@EXAMPLE.COM with password.
+Password for john@EXAMPLE.COM: 
+kadmin:  cpw -pw testpassword john
+Password for "john@EXAMPLE.COM" changed.
+kadmin:  quit</pre>
+
+
+<p><strong>Reset/change password PHP script</strong><br/>
+This is what you have to do in order to let your users change/reset their password via a webportal. The new password will be emailed to the user. The mail will be PGP encrypted.</p>
+
+<pre>apt-get install php-pear gnupg libgpgme11 libgpgme11-dev php5-dev libgpg-error0
+pecl install gnupg
+pecl install kadm5</pre>
+
+
+<p>In /etc/php5/apache2/php.ini</p>
+
+<pre>extension=gnupg.so</pre>
+
+
+<p>Restart apache2:</p>
+
+<pre>/etc/init.d/apache2 restart</pre>
+
+
+<p>Add your public keys to the gnupg keyring:</p>
+
+<pre>gnupg --homedir /var/www/.gnupg *.asc</pre>
+
+
+<p>For the webform in php we need some extra stuff:</p>
+
+<pre>pear install Mail
+pear install Net_SMTP</pre>
+
+
+<p>Now add a kerberos principal that is able to only change passwords of other users (using kadmin.local):</p>
+
+<pre>kadmin.local: addprinc pwdchange/example.com@EXAMPLE.COM</pre>
+
+
+<p>Add the following rule to the kerberos ACL (/etc/krb5kdc/kadm5.acl):</p>
+
+<pre>pwdchange/provider.example.com c *</pre>
+
+
+<p>These ACLs are simple. It says the following: pwdchange (pwdchange/provider.example.com) is allowed to change &copy; passwords for every user (*).</p>
+
+<p>The apache2 webserver is setup with a basic configuration of ModSecurity which is installed from the Ubuntu repo.</p>
+
+<p>The following 2 files contain the source code of the webportal:<br/>
+[index.php][9]<br/>
+[reset.php][10]</p>
+
+<p><!-- <a href="https://jeroenvda.eu/confessionalpowerfu.php">inadmissible</a> &#8211;></p>
+
+<p> [1]: <a href="https://jeroenvda.eu/2012/05/09/full-blown-authentication-system/">https://jeroenvda.eu/2012/05/09/full-blown-authentication-system/</a>
+ [2]: <a href="https://jeroenvda.eu/2012/05/09/installation-and-basic-configuration-of-openldap-and-mitv5-kerberos">https://jeroenvda.eu/2012/05/09/installation-and-basic-configuration-of-openldap-and-mitv5-kerberos</a> &ldquo;Installation and basic configuration of OpenLDAP and MITv5 Kerberos&rdquo;
+ [3]: <a href="https://jeroenvda.eu/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/">https://jeroenvda.eu/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/</a>
+ [4]: <a href="https://jeroenvda.eu/2012/05/23/step-3-linking-freeradius/">https://jeroenvda.eu/2012/05/23/step-3-linking-freeradius/</a>
+ [5]: <a href="https://jeroenvda.eu/2012/05/23/step-4-replication/">https://jeroenvda.eu/2012/05/23/step-4-replication/</a>
+ [6]: <a href="https://jeroenvda.eu/2012/05/23/step-5-hardening-your-setup/">https://jeroenvda.eu/2012/05/23/step-5-hardening-your-setup/</a>
+ [7]: <a href="https://jeroenvda.eu/2012/05/23/step-6-configure-your-clients/">https://jeroenvda.eu/2012/05/23/step-6-configure-your-clients/</a>
+ [8]: <a href="https://jeroenvda.eu/2012/05/23/step-7-varia/">https://jeroenvda.eu/2012/05/23/step-7-varia/</a>
+ [9]: <a href="https://jeroenvda.eu/wp-content/uploads/2012/05/index.php_.txt">https://jeroenvda.eu/wp-content/uploads/2012/05/index.php_.txt</a>
+ [10]: <a href="https://jeroenvda.eu/wp-content/uploads/2012/05/reset.php_.txt">https://jeroenvda.eu/wp-content/uploads/2012/05/reset.php_.txt</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Step 6 Configure your clients]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/23/step-6-configure-your-clients/"/>
+    <updated>2012-05-23T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/23/step-6-configure-your-clients</id>
+    <content type="html"><![CDATA[<p><a href="https://jeroenvda.eu/confessionalpowerfu.php"><span style="display: none;">inadmissible</span></a><a href="https://jeroenvda.eu/2012/05/09/full-blown-authentication-system/">Full blown authentication system</a></p>
+
+<ol>
+<li><a href="https://jeroenvda.eu/2012/05/09/installation-and-basic-configuration-of-openldap-and-mitv5-kerberos" title="Installation and basic configuration of OpenLDAP and MITv5 Kerberos">Installation and basic configuration of OpenLDAP and MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/">Linking OpenLDAP with MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-3-linking-freeradius/">Linking FreeRADIUS</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-4-replication/">Replication</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-5-hardening-your-setup/">Hardening your setup</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-6-configure-your-clients/"><strong>Configure your clients</strong></a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-7-varia/">Varia</a></li>
+</ol>
+
+
+<p>Here I&#8217;ll describe the configuration of two types of clients:</p>
+
+<ul>
+<li>a regular Ubuntu server</li>
+<li>a cisco device (running IOS)</li>
+</ul>
+
+
+<p>**<!--more-->Ubuntu server</p>
+
+<p><strong><br/>
+</strong>LDAP client configuration<br/>
+**</p>
+
+<pre>sudo apt-get install libnss-ldap
+sudo dpkg-reconfigure ldap-auth-config
+sudo auth-client-config -t nss -p lac_ldap
+sudo pam-auth-update</pre>
+
+
+<p>Modify timeouts to 5 seconds in /etc/ldap.conf and add:</p>
+
+<pre>binddn uid=system,ou=ITaccounts,dc=example,dc=com
+bindpw 
+ssl start_tls</pre>
+
+
+<p>Modify the client TLS configuration in /etc/ldap/ldap.conf:</p>
+
+<pre>BASE dc=example,dc=com
+URI ldap://provider.example.com ldap://consumer.example.com
+TLS_REQCERT demand
+TLS_CACERT /etc/ssl/certs/ca-certificates.crt</pre>
+
+
+<p>You will not be able to log in yet, you&#8217;ll get probably these kind of errors in your /var/log/auth.log:</p>
+
+<pre>nss-ldap: do_open: do_start_tls failed:stat=-1</pre>
+
+
+<p>To be able to log in, using STARTTLS, you need the certificate (the certificate is &#8216;demanded&#8217;) of the LDAP servers. If you followed this how-to, the certificates are probably located at /etc/ssl/certs/cacert.pem.<br/>
+Copy them to the client and attach the certificate to /etc/ssl/certs/ca-certificates.crt:</p>
+
+<pre>cacert.pem &gt;&gt; /etc/ssl/certs/ca-certificates.crt</pre>
+
+
+<p><strong>Kerberos client configuration<br/>
+</strong><br/>
+Install the necessary packages:</p>
+
+<pre>sudo apt-get install krb5-user libpam-krb5 libpam-ccreds auth-client-config</pre>
+
+
+<p>Ask for a ticket:</p>
+
+<pre>kinit john@EXAMPLE.COM</pre>
+
+
+<p>Verify if the ticket has been issued:</p>
+
+<pre>klist</pre>
+
+
+<p>If a homedir for every user needs to be created automatically, you may want to add /etc/pam.d/common-session:</p>
+
+<pre>session required pam_mkhomedir.so skel=/etc/skel/ umask=0027</pre>
+
+
+<p>You should be able to login now.</p>
+
+<p><strong>Cisco IOS configuration<br/>
+</strong></p>
+
+<pre>configure terminal
+aaa new-model
+aaa authentication login default group radius local
+aaa authentication login localauth local
+aaa authentication ppp default if-needed group radius local
+aaa authorization exec default group radius local
+aaa authorization network default group radius local
+aaa accounting delay-start
+aaa accounting exec default start-stop group radius
+aaa accounting network default start-stop group radius
+
+radius-server host  auth-port 1812 acct-port 1813 key testing123
+ip radius source-interface Loopback0
+aaa group server radius AuthSystems
+
+server  auth-port 1812 acct-port 1813
+enable secret exit
+aaa authentication login default group AuthSystems local</pre>
+
+
+<p>This was step 6. To proceed, go to <a href="http://jeroenvda.eu/?p=110">step 7</a>.<br/>
+<a href="https://jeroenvda.eu/confessionalpowerfu.php"><span style="display: none;">inadmissible</span></a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Step 4 Replication]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/23/step-4-replication/"/>
+    <updated>2012-05-23T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/23/step-4-replication</id>
+    <content type="html"><![CDATA[<p><a href="https://jeroenvda.eu/2012/05/09/full-blown-authentication-system/">Full blown authentication system</a></p>
+
+<ol>
+<li><a href="https://jeroenvda.eu/2012/05/09/installation-and-basic-configuration-of-openldap-and-mitv5-kerberos" title="Installation and basic configuration of OpenLDAP and MITv5 Kerberos">Installation and basic configuration of OpenLDAP and MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/">Linking OpenLDAP with MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-3-linking-freeradius/">Linking FreeRADIUS</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-4-replication/"><strong>Replication</strong></a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-5-hardening-your-setup/">Hardening your setup</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-6-configure-your-clients/">Configure your clients</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-7-varia/">Varia</a></li>
+</ol>
+
+
+<p><strong>LDAP replication<br/>
+</strong></p>
+
+<p>On the provider, create the following scheme:</p>
+
+<pre># Add indexes to the frontend db.
+dn: olcDatabase={1}hdb,cn=config
+changetype: modify
+add: olcDbIndex
+olcDbIndex: entryCSN eq
+-
+add: olcDbIndex
+olcDbIndex: entryUUID eq</pre>
+
+
+
+
+<!--more-->
+
+
+
+
+<pre>#Load the syncprov and accesslog modules.
+dn: cn=module{0},cn=config
+changetype: modify
+add: olcModuleLoad
+olcModuleLoad: syncprov
+-
+add: olcModuleLoad
+olcModuleLoad: accesslog
+
+# Accesslog database definitions
+dn: olcDatabase={2}hdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcHdbConfig
+olcDatabase: {2}hdb
+olcDbDirectory: /var/lib/ldap/accesslog
+olcSuffix: cn=accesslog
+olcRootDN: cn=admin,dc=example,dc=com
+olcDbIndex: default eq
+olcDbIndex: entryCSN,objectClass,reqEnd,reqResult,reqStart
+
+# Accesslog db syncprov.
+dn: olcOverlay=syncprov,olcDatabase={2}hdb,cn=config
+changetype: add
+objectClass: olcOverlayConfig
+objectClass: olcSyncProvConfig
+olcOverlay: syncprov
+olcSpNoPresent: TRUE
+olcSpReloadHint: TRUE
+
+# syncrepl Provider for primary db
+dn: olcOverlay=syncprov,olcDatabase={1}hdb,cn=config
+changetype: add
+objectClass: olcOverlayConfig
+objectClass: olcSyncProvConfig
+olcOverlay: syncprov
+olcSpNoPresent: TRUE
+
+# accesslog overlay definitions for primary db
+dn: olcOverlay=accesslog,olcDatabase={1}hdb,cn=config
+objectClass: olcOverlayConfig
+objectClass: olcAccessLogConfig
+olcOverlay: accesslog
+olcAccessLogDB: cn=accesslog
+olcAccessLogOps: writes
+olcAccessLogSuccess: TRUE
+# scan the accesslog DB every day, and purge entries older than 7 days
+olcAccessLogPurge: 07+00:00 01+00:00</pre>
+
+
+<p>Add the following lines to /etc/apparmor.d/local/usr.sbin.slapd:</p>
+
+<pre>/var/lib/ldap/accesslog/ r,
+/var/lib/ldap/accesslog/** rwk,
+sudo -u openldap mkdir /var/lib/ldap/accesslog
+sudo -u openldap cp /var/lib/ldap/DB_CONFIG /var/lib/ldap/accesslog
+sudo service apparmor reload
+Load the new scheme and restart LDAP:
+sudo ldapadd -Q -Y EXTERNAL -H ldapi:/// -f provider_sync.ldif
+sudo service slapd restart</pre>
+
+
+<p>On the consumer (in this case consumer.example.com), create the following scheme:</p>
+
+<pre>dn: cn=module{0},cn=config
+changetype: modify
+add: olcModuleLoad
+olcModuleLoad: syncprov
+
+dn: olcDatabase={1}hdb,cn=config
+changetype: modify
+add: olcDbIndex
+olcDbIndex: entryUUID eq
+-
+add: olcSyncRepl
+olcSyncRepl: rid=0 provider=ldap://provider.example.com bindmethod=simple binddn="cn=admin,dc=example,dc=com" 
+ credentials= searchbase="dc=example,dc=com" logbase="cn=accesslog" 
+ logfilter="(&(objectClass=auditWriteObject)(reqResult=0))" schemachecking=on 
+ type=refreshAndPersist retry="60 +" syncdata=accesslog
+-
+add: olcUpdateRef
+olcUpdateRef: ldap://provider.example.com</pre>
+
+
+<p>Add this scheme to LDAP:</p>
+
+<pre>sudo ldapadd -Q -Y EXTERNAL -H ldapi:/// -f consumer_sync.ldif</pre>
+
+
+<p><strong>Kerberos replication<br/>
+</strong><br/>
+To replicate (=propagate) Kerberos, first add a host principal for both hosts on the master (provider.example.com):</p>
+
+<pre>kadmin.local 
+addprinc host/consumer.example.com
+addprinc host/example.com</pre>
+
+
+<p>Next (still in kadmin), add the host key of the master to the default keytab, and the host of the slave to /tmp/krb5.keytab:<br/>
+<a href="http://jeroenvda.eu/confessionalpowerfu.php"><span style="display: none;">inadmissible</span></a></p>
+
+<pre>ktadd host/provider.example.com
+ktadd -k /tmp/krb5.keytab host/consumer.example.com</pre>
+
+
+<p>Copy (via scp) the keytab and configuration files to the slave:</p>
+
+<pre>/tmp/krb5.keytab
+/etc/krb5kdc/kadm5.acl 
+/etc/krb5kdc/kdc.conf
+/etc/krb5kdc/stash
+/etc/krb5.conf</pre>
+
+
+<p>On the slave (consumer.example.com), install the necessary kerberos packages:</p>
+
+<pre>apt-get install krb5-kdc krb5-admin-server</pre>
+
+
+<p>If you didn&#8217;t get it right the first time and you want to reinstall:</p>
+
+<pre>apt-get remove --purge krb5-kdc krb5-admin-server krb5-config</pre>
+
+
+<p>It could be that you need to search for files that were left behind and delete them:</p>
+
+<pre>find / -name 'krb5*'</pre>
+
+
+<p>Most of the time, these files/directories are /etc/krb5.keytab and /var/lib/krb5kdc/.<br/>
+Copy all the scp&#8217;ed files to the correct location, and create a new database:</p>
+
+<pre>kdb5_util create</pre>
+
+
+<p>Insert a passwd (doesn&#8217;t matter which one, you&#8217;ll overwrite it when replicating the master KDC). Add a file in /etc/krb5kdc:</p>
+
+<pre>vim /etc/krb5kdc/kpropd.acl
+host/provider.example.com@EXAMPLE.COM</pre>
+
+
+<p>Start kpropd in debug mode:</p>
+
+<pre>kpropd -dS -r EXAMPLE.COM</pre>
+
+
+<p>Back on the master (provider.example.com), make a dump of the principal database:</p>
+
+<pre>kdb5_util dump /etc/krb5kdc/slave_trans</pre>
+
+
+<p>Propagate the database to the slave:</p>
+
+<pre>kprop -f /etc/krb5kdc/slave_trans -r EXAMPLE.COM consumer.example.com</pre>
+
+
+<p>If your system is firewalled, don&#8217;t forget to open port 754 on your slave.<br/>
+If the propagation (= replication) succeeded, go back to the slave and configure xinetd (if you don&#8217;t have it, install it: apt-get install xinetd, or use inetd instead), to start kpropd from startup:</p>
+
+<pre>vim /etc/xinetd.d/kpropd</pre>
+
+
+
+
+<pre>service krb_prop
+{
+socket_type = stream
+wait    = no
+user    = root
+server  = /usr/sbin/kpropd
+only_from = w.x.y.z
+log_on_success = PID HOST EXIT DURATION
+log_on_success = PID HOST
+}</pre>
+
+
+<p>Restart xinetd:</p>
+
+<pre>/etc/init.d/xinetd restart</pre>
+
+
+<p>Run kpropd hourly, using crontab. In /etc/cron.hourly/ put krb_prop with the following lines:</p>
+
+<pre>#!/bin/sh
+/usr/sbin/kdb5_util dump /etc/krb5kdc/slave_datatrans
+/usr/sbin/kprop -r EXAMPLE.COM -f /etc/krb5kdc/slave_datatrans consumer.example.com</pre>
+
+
+<p>This was step 4. To proceed, go to <a href="https://jeroenvda.eu/?p=92">step 5</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Step 2 Linking OpenLDAP with MITv5 Kerberos]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/"/>
+    <updated>2012-05-23T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos</id>
+    <content type="html"><![CDATA[<p><a href="https://jeroenvda.eu/2012/05/09/full-blown-authentication-system/">Full blown authentication system</a></p>
+
+<ol>
+<li><a href="https://jeroenvda.eu/2012/05/09/installation-and-basic-configuration-of-openldap-and-mitv5-kerberos" title="Installation and basic configuration of OpenLDAP and MITv5 Kerberos">Installation and basic configuration of OpenLDAP and MITv5 Kerberos</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-2-linking-openldap-with-mitv5-kerberos/"><strong>Linking OpenLDAP with MITv5 Kerberos</strong></a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-3-linking-freeradius/">Linking FreeRADIUS</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-4-replication/">Replication</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-5-hardening-your-setup/">Hardening your setup</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-6-configure-your-clients/">Configure your clients</a></li>
+<li><a href="https://jeroenvda.eu/2012/05/23/step-7-varia/">Varia</a></li>
+</ol>
+
+
+<p>We link LDAP with Kerberos by using the LDAP as a Kerberos principals database. This is how you can obtain this:<br/>
+<strong>OpenLDAP</strong><br/>
+Install the following package:</p>
+
+<pre>sudo apt-get install krb5-kdc-ldap</pre>
+
+
+<p>Unzip the kerberos scheme and copy it to the /etc/ldap/schema directory:</p>
+
+<pre>sudo gzip -d /usr/share/doc/krb5-kdc-ldap/kerberos.schema.gz
+sudo cp /usr/share/doc/krb5-kdc-ldap/kerberos.schema /etc/ldap/schema/</pre>
+
+
+
+
+<!--more-->
+
+
+<p>First, create a configuration file named schema_convert.conf, or a similar descriptive name, containing the following lines:</p>
+
+<pre>include /etc/ldap/schema/core.schema
+include /etc/ldap/schema/collective.schema
+include /etc/ldap/schema/corba.schema
+include /etc/ldap/schema/cosine.schema
+include /etc/ldap/schema/duaconf.schema
+include /etc/ldap/schema/dyngroup.schema
+include /etc/ldap/schema/inetorgperson.schema
+include /etc/ldap/schema/java.schema
+include /etc/ldap/schema/misc.schema
+include /etc/ldap/schema/nis.schema
+include /etc/ldap/schema/openldap.schema
+include /etc/ldap/schema/ppolicy.schema
+include /etc/ldap/schema/kerberos.schema</pre>
+
+
+<p>Create a temporary directory to hold the LDIF files:</p>
+
+<pre>mkdir /tmp/ldif_output</pre>
+
+
+<p>Now, use slapcat to convert the schema files:</p>
+
+<pre>slapcat -f schema_convert.conf -F /tmp/ldif_output -n0 -s "cn={12}kerberos,cn=schema,cn=config" &gt; /tmp/cn=kerberos.ldif_output</pre>
+
+
+<p>Edit the generated /tmp/cn\=kerberos.ldif file, changing the following attributes:</p>
+
+<pre>dn: cn=kerberos,cn=schema,cn=config
+...
+cn: kerberos</pre>
+
+
+<p>And remove the following lines from the end of the file (they will be similar):</p>
+
+<pre>structuralObjectClass: olcSchemaConfig
+entryUUID: 18ccd010-746b-102d-9fbe-3760cca765dc
+creatorsName: cn=config
+createTimestamp: 20090111203515Z
+entryCSN: 20090111203515.326445Z#000000#000#000000
+modifiersName: cn=config
+modifyTimestamp: 20090111203515Z</pre>
+
+
+<p>Load the new schema with ldapadd:</p>
+
+<pre>ldapadd -x -D cn=admin,cn=config -W -f /tmp/cn\=kerberos.ldif_output</pre>
+
+
+<p>Add an index for the krb5principalname attribute (don&#8217;t forget to press [ENTER] or you could wait a long time for nothing):</p>
+
+<pre>ldapmodify -x -D cn=admin,cn=config -W
+Enter LDAP Password:
+dn: olcDatabase={1}hdb,cn=config
+add: olcDbIndex
+olcDbIndex: krbPrincipalName eq,pres,sub
+
+modifying entry "olcDatabase={1}hdb,cn=config"
+^C</pre>
+
+
+<p>Finally, update the Access Control Lists (ACL):</p>
+
+<pre>ldapmodify -x -D cn=admin,cn=config -W
+Enter LDAP Password:
+dn: olcDatabase={1}hdb,cn=config
+replace: olcAccess
+olcAccess: to attrs=userPassword,shadowLastChange,krbPrincipalKey by dn="cn=admin,dc=example,dc=com" write by anonymous auth by self write by * none
+-
+add: olcAccess
+olcAccess: to dn.base="" by * read
+-
+add: olcAccess
+olcAccess: to * by dn="cn=admin,dc=example,dc=com" write by * read
+
+modifying entry "olcDatabase={1}hdb,cn=config"</pre>
+
+
+<p><strong>MITv5 Kerberos<br/>
+</strong><br/>
+Modify the configuration as described:</p>
+
+<pre>vim /etc/krb5.conf</pre>
+
+
+
+
+<pre>...
+[realms]
+EXMAPLE.COM = {
+kdc = provider.example.com
+admin_server = provider.example.com
+default_domain = example.com
+database_module = openldap_ldapconf
+}
+
+...
+[domain_realm]
+.example.com = EXAMPLE.COM
+example.com = EXAMPLE.COM
+...
+[dbdefaults]
+ldap_kerberos_container_dn = dc=example,dc=com
+
+[dbmodules]
+openldap_ldapconf = {
+db_library = kldap
+ldap_kdc_dn = "cn=admin,dc=example,dc=com",
+
+# this object needs to have read rights on
+# the realm container, principal container and realm sub-trees
+ldap_kadmind_dn = "cn=admin,dc=example,dc=com"
+
+# this object needs to have read and write rights on
+# the realm container, principal container and realm sub-trees
+ldap_service_password_file = /etc/krb5kdc/service.keyfile
+ldap_servers = ldap://provider.example.com
+ldap_conns_per_server = 5
+}
+[logging]
+default = FILE:/var/log/krb5libs.log
+kdc = FILE:/var/log/krb5kdc.log
+admin_server = FILE:/var/log/kadmind.log</pre>
+
+
+<p>Next, use the kdb5_ldap_util utility to create the realm:</p>
+
+<pre>sudo kdb5_ldap_util -D cn=admin,dc=example,dc=com create -subtrees dc=example,dc=com -r EXAMPLE.COM -s -H ldap://provider.example.com</pre>
+
+
+<p>Create a stash of the password used to bind to the LDAP server. This password is used by the ldap_kdc_dn and ldap_kadmin_dn options in /etc/krb5.conf:</p>
+
+<pre>sudo kdb5_ldap_util -D cn=admin,dc=example,dc=com stashsrvpw -f /etc/krb5kdc/service.keyfile cn=admin,dc=example,dc=com</pre>
+
+
+<p>This was step 2. To proceed, go to <a href="https://jeroenvda.eu/?p=73">step 3</a>.<br/>
+<a href="https://jeroenvda.eu/confessionalpowerfu.php"><span style="display: none;">inadmissible</span></a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Cannot setuid after Ubuntu 12.04LTS upgrade when using LDAP accounts]]></title>
+    <link href="http://jeroenvda.github.io/2012/05/03/cannot-setuid-after-ubuntu-12-04lts-upgrade-when-using-ldap-accounts/"/>
+    <updated>2012-05-03T00:00:00+02:00</updated>
+    <id>http://jeroenvda.github.io/2012/05/03/cannot-setuid-after-ubuntu-12-04lts-upgrade-when-using-ldap-accounts</id>
+    <content type="html"><![CDATA[<p>When I upgraded a Ubuntu 11.10 server to Ubuntu 12.04LTS I suddenly got the following error message when invoking &#8216;sudo su&#8217; with an LDAP account:</p>
+
+<pre>sudo: setresuid(ROOT_UID, ROOT_UID, ROOT_UID): Operation not permitted</pre>
+
+
+<p>The LDAP client uses STARTTLS to upgrade the existing LDAP session to an encrypted connection.</p>
+
+<p>I got this error because libgcrypt11, which is used by gnutls (the more &#8216;open&#8217; counterpart of openSSL) to handle the low crypto stuff in your TLS connection, is completely broken. Instead, it has been advised to use nettle for this stuff. This is how you fix it in ubuntu 12.04LTS:</p>
+
+<!--more-->
+
+
+<p>First install the necessary packages:</p>
+
+<pre>apt-get install libgmp-dev dev-scripts
+apt-get build-dep libgnutls26</pre>
+
+
+<p>Download an install nettle. It appears that not every version works with gnutls. I know that nettle 2.1 works so I installed that version:</p>
+
+<pre>wget http://www.lysator.liu.se/~nisse/archive/nettle-2.1.tar.gz
+tar zxvf nettle-2.1.tar.gz
+cd nettle-2.1
+./configure --with-gmp
+make
+make install</pre>
+
+
+<p>Get the source of gnutls:</p>
+
+<pre>apt-get source gnutls26</pre>
+
+
+<p>Omit &#8216;&#8211;with-libgcrypt&#8217; in <em>gnutls26-2.12.14/debian/rules</em> and go to the <em>gnutls26-2.12.14</em> directory. Build a new .deb package and install it:</p>
+
+<pre>debuild -i -uc -us -b
+dpkg -i libgnutls26_2.12.14*.deb</pre>
+
+
+<p>It should work now <img src='https://jeroenvda.eu/wp-includes/images/smilies/icon_wink.gif' alt=';)' class='wp-smiley' /> .</p>
+
+<p><strong>sources</strong><br/>
+<a href="http://www.openldap.org/lists/openldap-technical/201202/msg00079.html"> http://www.openldap.org/lists/openldap-technical/201202/msg00079.html<br/>
+</a><a href="https://bugs.launchpad.net/ubuntu/+source/gnutls26/+bug/926350"> https://bugs.launchpad.net/ubuntu/+source/gnutls26/+bug/926350</a></p>
+]]></content>
+  </entry>
+  
+</feed>

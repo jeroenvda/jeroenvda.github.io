@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: SSH | jeroenvda.eu]]></title>
+  <link href="https://jeroenvda.eu/blog/categories/ssh/atom.xml" rel="self"/>
+  <link href="https://jeroenvda.eu/"/>
+  <updated>2014-02-13T20:10:15+01:00</updated>
+  <id>https://jeroenvda.eu/</id>
+  <author>
+    <name><![CDATA[Jeroen Vanderauwera]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Best practices for setting up a new server]]></title>
+    <link href="https://jeroenvda.eu/2012/11/05/best-practices-for-setting-up-a-new-server/"/>
+    <updated>2012-11-05T00:00:00+01:00</updated>
+    <id>https://jeroenvda.eu/2012/11/05/best-practices-for-setting-up-a-new-server</id>
+    <content type="html"><![CDATA[<p><img class="alignright size-thumbnail wp-image-208" title="best practices" alt="" src="https://jeroenvda.eu/wp-content/uploads/2012/11/best-practice-150x150.jpg" width="150" height="150" /></p>
+
+<p>In this article you can find a list of things that I immediately try to put into place after installing a new server.</p>
+
+<p><strong>Put automatic security updates on</strong><br/>
+So you don&#8217;t skip any important security updates. If your system is business critical, please leave (general) automatic updates off, as applications tend to rely on each other. It&#8217;s best to first test these updates to see if nothing breaks.</p>
+
+<p><strong>Smart partitioning</strong><br/>
+Everyone needs to decide this for there own but I prefer to put /var/log on a different partition. A (D)DoS attack could generate a lot of logs, which could fill up your hard disk quickly, making your system unresponsive.<br/>
+Put /tmp also on a separate partition and only mount it with the right permissions, like noexec. Also, like /var/log, /tmp can dynamically expand, which can result in saturation of the whole root partition, if not placed on a separate partition.<!--more--></p>
+
+<p><strong>Decent SSH configuration</strong><br/>
+As explained in an earlier <a href="http://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration/">post</a>, try to setup your SSH configuration as tight as possible from the beginning. If possible generate some private/public key pair and use it to login remotely.</p>
+
+<p><strong>Central logging</strong><br/>
+Use syslog, syslog-ng, or ksyslogd to let your applications on your server log to a central logging server. I prefer syslog-ng, as this supports encryption. You can use a log correlator like <a href="http://www.splunk.com/">spunk</a> or <a href="http://logstash.net/">log stash</a> to analyze your logs.</p>
+
+<p><strong>System monitoring</strong><br/>
+Use a monitoring system to monitor your hardware and software, like free disk space, CPU usage, network connection,… . Nagios and Zabbix are two free monitoring systems.</p>
+
+<p><strong>Set up a host based firewall and intrusion detection system</strong><br/>
+Set up a simple host firewall like ufw. A ridiculously short howto can be found in an earlier <a href="http://jeroenvda.eu/2012/10/06/ufw-a-simple-command-line-firewall/">post</a> I made, but it will get you started.<br/>
+As an network-based intrusion detection system you can use <a href="http://www.snort.org/">Snort</a> or <a href="http://www.openinfosecfoundation.org/index.php/download-suricata">Suricata</a>, but since this post is more focused on systems, you can use a host-based intrusion detection system like <a href="http://www.ossec.net/">OSSEC</a>, which can run as a stand-alone HIDS or in a agent/manager setup. OSSEC can also be a good alternative to collect logs to a central place, as it also provides encryption (by default).</p>
+
+<p><strong>Split management traffic from the publicly available services</strong><br/>
+Every system you install should be connected to two separate (V)LANs. One for the services they provide, and one for the management of the system (SSH access, LDAP authentication, monitoring, central logging,…). The latter should be some kind of private network. The more services are accessible from the Internet the more risk they get exploited. If the SSH service is not accessible from the Internet, it cannot be exploited.</p>
+
+<p><strong>Get some kind of backup solution in place</strong><br/>
+And test your disaster recovery procedure!<br/>
+You can use different tools for this. It depends if you want to backup on tapes, another system or an external hard drive. You can use something relatively easy like <a href="http://rsync.samba.org/">rsync</a> or a script. It&#8217;s a good practice to use some kind of versioning system to backup /etc for example. You can use svn for that. If a system would crash you can always roll back to your previous configuration.<br/>
+For bigger environments you could use <a href="http://www.bacula.org/en/">Bacula</a>.<br/>
+Don&#8217;t forget to do as well incremental as full backups. A good practice could be to perform daily incremental backups and weekly full backups.</p>
+
+<p><strong>Authentication</strong><br/>
+Hook up your system to some kind of central authentication system like an AD or LDAP. Kerberos is integrated to AD by default. If possible use two-factor authentication. <a href="http://code.google.com/p/google-authenticator/">Google authenticator</a>; is free and easy to implement.<a href="http://www.yubico.com/products/yubikey-hardware/">Yubi keys</a> are another alternative, not that expensive and easy in use (and small).</p>
+
+<p>If you think about anything else, feel free to contribute.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Getting a (more) secure SSH configuration]]></title>
+    <link href="https://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration/"/>
+    <updated>2012-02-23T00:00:00+01:00</updated>
+    <id>https://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration</id>
+    <content type="html"><![CDATA[<p>Did you ever install an Intrusion Detection System on a public server? Well I did and it was like a wake-up call to me. The server didn&#8217;t had anything important running on it, but nevertheless the same notification from my IDS kept popping up: &#8216;SSH: Multiple failed logins in a small period of time.&#8217; These attacks appeared to come from all over the world: the Netherlands, France, Russia, Japan, South-Korea,&#8230;</p>
+
+<p>Most of the people don&#8217;t do more than invoking the &#8216;apt-get install&#8217; command. They stick with the default configuration because &#8230; well &#8230; it works. With the following few simple configuration changes in the /etc/ssh/sshd_config file you can make your SSH enabled server less open to the outside world:</p>
+
+<p><strong>1. The most basic rule</strong></p>
+
+<!--more-->
+
+
+<p>Do not allow root to login via SSH. Every attacker that attempted to break in, tried the root account. Obviously this is done because of these two reasons:</p>
+
+<ol>
+<li>The attacker is (quite) sure that the account exists.</li>
+<li>If you can get in as root, you don&#8217;t need an exploit for privilege escalation. You can do anything you want.</li>
+</ol>
+
+
+<pre>PermitRootLogin = no</pre>
+
+
+<h1>2. Simple but effective</h1>
+
+<p>Change the default SSH port (22). If hackers are scanning for random targets, and at the first glance they see that port 22 is closed, they will hop on to the next IP address.</p>
+
+<pre>Port = 6666</pre>
+
+
+<h1>3. Permit and restrict access to certain users</h1>
+
+<p>If only certain users are allowed access you can use the &#8220;AllowUsers&#8221; parameter to control it. Do the opposite for &#8220;DenyUsers&#8221;.</p>
+
+<pre>AllowUsers = jeroen jim
+DenyUsers = john joe</pre>
+
+
+<h1>4. Only allow access from your management LAN</h1>
+
+<p>If your system has multiple interfaces and SSH access is only allowed from the internal (management) LAN, let the SSH process only listen on the IP address connected to that LAN:</p>
+
+<pre>ListenAddress = 10.0.0.1</pre>
+
+
+<h1>5. Deny all host based authentication</h1>
+
+<p>This forces users to enter a password when authenticating and not to use .rhost files for example:</p>
+
+<pre>IgnoreHosts = yes
+HostbasedAuthentiction = no
+RhostsAuthentication = no
+RhostsRSAAuthentication = no</pre>
+
+
+<h1>6. Use the newest SSH protocol</h1>
+
+<p>Because SSH 1 is ooold and contains some vulnerabilities.</p>
+
+<pre>Protocol = 2</pre>
+
+
+<h1>7. Control the maximum simultaneous unauthenticated connections</h1>
+
+<p>This can protect you against brute force script that use forking.</p>
+
+<pre>MaxStartups 10</pre>
+
+
+<h1> 8. Don&#8217;t allow empty passwords</h1>
+
+<p>I think that&#8217;s quite obvious <img src='https://jeroenvda.eu/wp-includes/images/smilies/icon_wink.gif' alt=';)' class='wp-smiley' /> .</p>
+
+<pre>PermitEmptyPasswords = no</pre>
+
+
+<p>Or even better: use public/private key pairs. Or how the OpenBSD journal puts it:</p>
+
+<blockquote><p>The OpenBSD Project is selling SSH Mastery print version as a fund-raiser. If you&#8217;ve been waiting for a print copy, this is your chance.</p>
+
+<p>If you don&#8217;t need it, you know someone who is still using passwords with SSH. Buy a copy. Slap them soundly with it.</p></blockquote>
+
+<h1>9. Put up a banner</h1>
+
+<p>Put up a banner that&#8217;s shown at login time, that shows a warning. This is necessary in order to prosecute unauthorized users, if it comes to this.</p>
+
+<pre>Banner /etc/issue</pre>
+
+
+<p>An example:</p>
+
+<pre>************************************************
+NOTICE TO USERS WARNING! The use of this system is restricted
+to authorized users, unauthorized access is forbidden and will
+be prosecuted by law. All information and communications on
+this system are subject to review, monitoring and recording at
+any time, without notice or permission. Users should have no 
+expectation of privacy. 
+*************************************************</pre>
+
+
+<p><strong>To summarize and for the lazy ones:</strong></p>
+
+<pre>PermitRootLogin = no
+Port = 6666
+AllowUsers = jeroen jim
+DenyUsers = john joe
+ListenAddress = 10.0.0.1
+IgnoreHosts = yes
+HostbasedAuthentiction = no
+RhostsAuthentication = no
+RhostsRSAAuthentication = no
+Protocol = 2
+MaxStartups 10
+Banner /etc/issue</pre>
+
+
+<p>And if you can: use key pairs to login!</p>
+]]></content>
+  </entry>
+  
+</feed>
