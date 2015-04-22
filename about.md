@@ -4,10 +4,12 @@ title: About
 permalink: /about/
 ---
 
-I'm Jeroen, living in Belgium and this is my blog. Most of my posts are about things I found out and that I like to share with others, they might help other people out.
+I'm Jeroen and I'm from Belgium. Most of my blog posts are about information security or Linux. I see it as a place where I keep my notes, maybe one day others may find it useful.
 
-I'm  working in the infosec sector for a few years now. First as incident responder for a CSIRT and currently more in the field of security analytics and intrusion detection research and engineering.
+### More about me
+
+I'm  working in the infosec sector for a few years now. First as incident responder for a CSIRT and currently in the field of security analytics and threat detection research and engineering.
 
 ### Contact me
 
-If you want to contact me, you can PM me on my social media accounts that are listed at the bottom of this page or shoot me an email on jeroen[AT]jeroenvda[DOT]eu.
+If you would have questions about something I wrote about, or how this site was made, feel free to PM me on one of my social media accounts or shoot me an email on jeroen[at]jeroenvda[dot]eu.
