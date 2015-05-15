@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: SSH | jeroenvda.eu]]></title>
-  <link href="https://jeroenvda.eu/blog/categories/ssh/atom.xml" rel="self"/>
-  <link href="https://jeroenvda.eu/"/>
+  <link href="http://jeroenvda.eu/blog/categories/ssh/atom.xml" rel="self"/>
+  <link href="http://jeroenvda.eu/"/>
   <updated>2014-02-13T20:10:15+01:00</updated>
-  <id>https://jeroenvda.eu/</id>
+  <id>http://jeroenvda.eu/</id>
   <author>
     <name><![CDATA[Jeroen Vanderauwera]]></name>
     
@@ -15,10 +15,10 @@
   
   <entry>
     <title type="html"><![CDATA[Best practices for setting up a new server]]></title>
-    <link href="https://jeroenvda.eu/2012/11/05/best-practices-for-setting-up-a-new-server/"/>
+    <link href="http://jeroenvda.eu/2012/11/05/best-practices-for-setting-up-a-new-server/"/>
     <updated>2012-11-05T00:00:00+01:00</updated>
-    <id>https://jeroenvda.eu/2012/11/05/best-practices-for-setting-up-a-new-server</id>
-    <content type="html"><![CDATA[<p><img class="alignright size-thumbnail wp-image-208" title="best practices" alt="" src="https://jeroenvda.eu/wp-content/uploads/2012/11/best-practice-150x150.jpg" width="150" height="150" /></p>
+    <id>http://jeroenvda.eu/2012/11/05/best-practices-for-setting-up-a-new-server</id>
+    <content type="html"><![CDATA[<p><img class="alignright size-thumbnail wp-image-208" title="best practices" alt="" src="http://jeroenvda.eu/wp-content/uploads/2012/11/best-practice-150x150.jpg" width="150" height="150" /></p>
 
 <p>In this article you can find a list of things that I immediately try to put into place after installing a new server.</p>
 
@@ -60,9 +60,9 @@ Hook up your system to some kind of central authentication system like an AD or 
   
   <entry>
     <title type="html"><![CDATA[Getting a (more) secure SSH configuration]]></title>
-    <link href="https://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration/"/>
+    <link href="http://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration/"/>
     <updated>2012-02-23T00:00:00+01:00</updated>
-    <id>https://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration</id>
+    <id>http://jeroenvda.eu/2012/02/23/getting-a-more-secure-ssh-configuration</id>
     <content type="html"><![CDATA[<p>Did you ever install an Intrusion Detection System on a public server? Well I did and it was like a wake-up call to me. The server didn&#8217;t had anything important running on it, but nevertheless the same notification from my IDS kept popping up: &#8216;SSH: Multiple failed logins in a small period of time.&#8217; These attacks appeared to come from all over the world: the Netherlands, France, Russia, Japan, South-Korea,&#8230;</p>
 
 <p>Most of the people don&#8217;t do more than invoking the &#8216;apt-get install&#8217; command. They stick with the default configuration because &#8230; well &#8230; it works. With the following few simple configuration changes in the /etc/ssh/sshd_config file you can make your SSH enabled server less open to the outside world:</p>
@@ -131,7 +131,7 @@ RhostsRSAAuthentication = no</pre>
 
 <h1> 8. Don&#8217;t allow empty passwords</h1>
 
-<p>I think that&#8217;s quite obvious <img src='https://jeroenvda.eu/wp-includes/images/smilies/icon_wink.gif' alt=';)' class='wp-smiley' /> .</p>
+<p>I think that&#8217;s quite obvious <img src='http://jeroenvda.eu/wp-includes/images/smilies/icon_wink.gif' alt=';)' class='wp-smiley' /> .</p>
 
 <pre>PermitEmptyPasswords = no</pre>
 

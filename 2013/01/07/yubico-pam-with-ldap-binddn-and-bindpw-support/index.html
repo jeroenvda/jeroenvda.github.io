@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="https://jeroenvda.eu/2013/01/07/yubico-pam-with-ldap-binddn-and-bindpw-support">
+  <link rel="canonical" href="http://jeroenvda.eu/2013/01/07/yubico-pam-with-ldap-binddn-and-bindpw-support">
   <link href="/favicon.png" rel="icon">
   <link href='http://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
   <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
@@ -103,7 +103,7 @@
 </header>
   <div class="row-fluid">
     <div class="span12">
-      <p><img class="alignright size-thumbnail wp-image-277" alt="yubico" src="https://jeroenvda.eu/wp-content/uploads/2013/01/yubico1-150x150.jpg" width="150" height="150" />Yubico offers a PAM module for unix/linux systems so you are able to log in with their yubikeys. The PAM module supports LDAP for yubikey/user mapping, but unfortunately it allows only to bind anonymously (you can&#8217;t give binddn or bindpw as an argument).</p>
+      <p><img class="alignright size-thumbnail wp-image-277" alt="yubico" src="http://jeroenvda.eu/wp-content/uploads/2013/01/yubico1-150x150.jpg" width="150" height="150" />Yubico offers a PAM module for unix/linux systems so you are able to log in with their yubikeys. The PAM module supports LDAP for yubikey/user mapping, but unfortunately it allows only to bind anonymously (you can&#8217;t give binddn or bindpw as an argument).</p>
 
 <p>Since I don&#8217;t allow anonymous binds on my LDAP server I started looking for a solution. Except for falling back to the &#8216;authfile&#8217; parameter in /etc/pam.d/common-session (or whatever file you&#8217;re using), I couldn&#8217;t find anything. So I dived into the C code of pam-yubico.c (which is part of yubico-pam), implemented support for binddn and bindpw and re-built it. In order to easily reprocess this I wrote a patch.</p>
 
